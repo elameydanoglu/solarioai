@@ -188,6 +188,8 @@ select { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-ra
 .hit { cursor: pointer; }
 .hit:hover rect + rect { opacity: 0.8; }
 .app-fields input[type="text"] { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--sky); color: var(--ink); font-family: var(--mono); font-size: 0.9rem; }
+@keyframes flash { 0% { background: var(--sun-soft); } 100% { background: transparent; } }
+.readout.flash { animation: flash 1.2s ease-out; border-radius: 12px; }
 @media (max-width: 900px) { .lab { grid-template-columns: 1fr; } }
 @media (max-width: 900px) { .importance { grid-template-columns: 1fr; } }
 @media (max-width: 520px) { .bar { grid-template-columns: 8rem 1fr 3rem; } }
@@ -293,7 +295,7 @@ select { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-ra
         <span class="eyebrow">SolarioAI predictor</span>
         <h2>Istanbul Solar Energy Predictor</h2>
         <p>Our original app, now built into the website. Enter today's weather, the last few days of solar radiation and your panel details, and the model predicts tomorrow's solar radiation and how much electricity your panels could generate.</p>
-        <p>Load a real day from 2026 to compare the prediction with what was actually measured.</p>
+        <p>It opens with today's real measurements from Istanbul, so the result is the forecast for tomorrow. Load a real day from 2026 to compare a prediction with what was actually measured.</p>
       </div>
     <form class="instrument" id="estimator" aria-label="What-if forecast">
       <div class="inst-head">
@@ -322,7 +324,7 @@ select { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-ra
           <div class="field"><label for="hum">Humidity Today (%)</label><input type="text" inputmode="decimal" id="hum" value="65"></div>
           <div class="field"><label for="prec">Rainfall Today (mm)</label><input type="text" inputmode="decimal" id="prec" value="0"></div>
           <div class="field"><label for="cloud">Cloud Cover Today (%)</label><input type="text" inputmode="decimal" id="cloud" value="30"></div>
-          <div class="field"><label for="date">Today's Date</label><input type="date" id="date" value="2025-06-15"></div>
+          <div class="field"><label for="date">Today's Date</label><input type="date" id="date" value=""></div>
         </fieldset>
         <fieldset>
           <legend>Solar radiation &amp; panels</legend>
@@ -336,6 +338,7 @@ select { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-ra
       </div>
       <div class="cta-row">
         <button type="submit" class="btn primary" id="predictBtn">Predict</button>
+        <button type="button" class="btn small" id="latestDay">Use today's real data</button>
         <button type="button" class="btn small" id="randomDay">Load a real day from 2026</button>
       </div>
       <p class="note">Decimal commas work too (3,8). Change any value and the Random Forest (60 trees, 10 features, trained on 2015–2025) recalculates the next day instantly in your browser. Days from 2026 were never seen in training. Electricity = radiation × panel area × efficiency.</p>
@@ -648,7 +651,7 @@ select { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-ra
   updateForecast();
 
   // ---- what-if lab ----
-  var loaded = null;
+  var loaded = null, latest = false;
   function labFeatures() {
     var iso = $("date").value || today, doy = doyOf(iso);
     var v = loaded ? loaded.slice(1, 9) : [num("temp"), num("hum"), num("prec"), num("cloud"), num("r0"), num("r1"), num("r2"), num("r3")];
@@ -669,17 +672,36 @@ select { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-ra
       $("dayPill").textContent = "Real day · " + loaded[0];
       $("actual").innerHTML = "Measured on " + addDays(loaded[0], 1) + ": <b>" + loaded[9].toFixed(2) + "</b> kWh/m². Model was off by <b>" + Math.abs(rad - loaded[9]).toFixed(2) + "</b>.";
       $("actual").hidden = false;
+    } else if (latest) {
+      $("dayPill").textContent = "Today's real data · " + fmtDay($("date").value, { day: "numeric", month: "short" });
+      $("actual").innerHTML = "Prediction for <b>" + fmtDay(addDays($("date").value, 1), { weekday: "long", day: "numeric", month: "long" }) + "</b>, from the latest measurements in Istanbul.";
+      $("actual").hidden = false;
     } else { $("dayPill").textContent = "Your inputs"; $("actual").hidden = true; }
   }
   function loadDay(r) {
-    loaded = r; $("date").value = r[0];
+    loaded = r; latest = false; $("date").value = r[0];
     $("temp").value = r[1]; $("hum").value = r[2]; $("prec").value = Math.round(r[3] * 10) / 10; $("cloud").value = r[4];
     $("r0").value = r[5].toFixed(2); $("r1").value = r[6].toFixed(2); $("r2").value = r[7].toFixed(2); $("r3").value = r[8].toFixed(2);
     updateLab();
   }
   var weatherIds = ["date", "temp", "hum", "prec", "cloud", "r0", "r1", "r2", "r3"];
-  $("estimator").addEventListener("input", function (e) { if (weatherIds.indexOf(e.target.id) >= 0) loaded = null; updateLab(); });
-  $("estimator").addEventListener("submit", function (e) { e.preventDefault(); });
+  $("estimator").addEventListener("input", function (e) { if (weatherIds.indexOf(e.target.id) >= 0) { loaded = null; latest = false; } updateLab(); });
+  $("estimator").addEventListener("submit", function (e) {
+    e.preventDefault();
+    updateLab();
+    var ro = $("estimator").querySelector(".readout");
+    ro.classList.remove("flash"); void ro.offsetWidth; ro.classList.add("flash");
+    if (ro.getBoundingClientRect().top < 0) ro.scrollIntoView({ block: "center", behavior: "smooth" });
+  });
+  function fillLatest() {
+    var r = M.recent, d = r[r.length - 1];
+    loaded = null; latest = true;
+    $("date").value = d[0];
+    $("temp").value = d[1]; $("hum").value = d[2]; $("prec").value = Math.round(d[3] * 10) / 10; $("cloud").value = d[4];
+    $("r0").value = d[5].toFixed(2); $("r1").value = r[2][5].toFixed(2); $("r2").value = r[1][5].toFixed(2); $("r3").value = r[0][5].toFixed(2);
+    updateLab();
+  }
+  $("latestDay").addEventListener("click", fillLatest);
   $("randomDay").addEventListener("click", function () { loadDay(M.days[Math.floor(Math.random() * M.days.length)]); });
 
   // ---- importance + 2026 numbers ----
@@ -691,7 +713,7 @@ select { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-ra
   $("mae26").textContent = M.mae26.toFixed(3); $("mae26b").textContent = M.mae26.toFixed(3); $("base26").textContent = M.base26.toFixed(3);
   $("n26").textContent = M.n26; $("gain26").textContent = ((1 - M.mae26 / M.base26) * 100).toFixed(1) + "%";
 
-  updateLab();
+  fillLatest();
 })();
 </script>
 </body>
