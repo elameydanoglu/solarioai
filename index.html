@@ -190,6 +190,9 @@ select { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-ra
 .app-fields input[type="text"] { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--sky); color: var(--ink); font-family: var(--mono); font-size: 0.9rem; }
 @keyframes flash { 0% { background: var(--sun-soft); } 100% { background: transparent; } }
 .readout.flash { animation: flash 1.2s ease-out; border-radius: 12px; }
+.readout.stale { opacity: 0.35; transition: opacity 0.2s; }
+#predictBtn { cursor: pointer; font-family: var(--body); }
+#predictBtn.pulse { box-shadow: 0 0 0 4px var(--sun-soft); background: var(--sun); border-color: var(--sun); color: #13203a; }
 @media (max-width: 900px) { .lab { grid-template-columns: 1fr; } }
 @media (max-width: 900px) { .importance { grid-template-columns: 1fr; } }
 @media (max-width: 520px) { .bar { grid-template-columns: 8rem 1fr 3rem; } }
@@ -341,7 +344,7 @@ select { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-ra
         <button type="button" class="btn small" id="latestDay">Use today's real data</button>
         <button type="button" class="btn small" id="randomDay">Load a real day from 2026</button>
       </div>
-      <p class="note">Decimal commas work too (3,8). Change any value and the Random Forest (60 trees, 10 features, trained on 2015–2025) recalculates the next day instantly in your browser. Days from 2026 were never seen in training. Electricity = radiation × panel area × efficiency.</p>
+      <p class="note">Decimal commas work too (3,8). Change any value and press Predict: the Random Forest (60 trees, 10 features, trained on 2015–2025) calculates the next day in your browser. Days from 2026 were never seen in training. Electricity = radiation × panel area × efficiency.</p>
     </form>
     </div>
   </section>
@@ -664,6 +667,7 @@ select { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-ra
     $("curveLine").setAttribute("d", line); $("curveFill").setAttribute("d", line + " Z"); $("curveSun").setAttribute("cy", (peak - 2).toFixed(1));
   }
   function updateLab() {
+    $("estimator").querySelector(".readout").classList.remove("stale"); $("predictBtn").classList.remove("pulse");
     var f = labFeatures(), rad = forest(f.x), kwh = rad * num("area") * num("eff") / 100;
     $("outRad").innerHTML = rad.toFixed(2) + "<small>kWh/m²</small>";
     $("outKwh").innerHTML = fmtK(kwh) + "<small>kWh</small>";
@@ -685,11 +689,19 @@ select { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-ra
     updateLab();
   }
   var weatherIds = ["date", "temp", "hum", "prec", "cloud", "r0", "r1", "r2", "r3"];
-  $("estimator").addEventListener("input", function (e) { if (weatherIds.indexOf(e.target.id) >= 0) { loaded = null; latest = false; } updateLab(); });
+  function markStale() {
+    $("estimator").querySelector(".readout").classList.add("stale");
+    $("dayPill").textContent = "Press Predict";
+    $("actual").hidden = true;
+    $("predictBtn").classList.add("pulse");
+  }
+  $("estimator").addEventListener("input", function (e) { if (weatherIds.indexOf(e.target.id) >= 0) { loaded = null; latest = false; } markStale(); });
   $("estimator").addEventListener("submit", function (e) {
     e.preventDefault();
     updateLab();
+    $("predictBtn").classList.remove("pulse");
     var ro = $("estimator").querySelector(".readout");
+    ro.classList.remove("stale");
     ro.classList.remove("flash"); void ro.offsetWidth; ro.classList.add("flash");
     if (ro.getBoundingClientRect().top < 0) ro.scrollIntoView({ block: "center", behavior: "smooth" });
   });
