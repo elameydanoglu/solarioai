@@ -193,6 +193,12 @@ select { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-ra
 .readout.stale { opacity: 0.35; transition: opacity 0.2s; }
 #predictBtn { cursor: pointer; font-family: var(--body); }
 #predictBtn.pulse { box-shadow: 0 0 0 4px var(--sun-soft); background: var(--sun); border-color: var(--sun); color: #13203a; }
+.today { display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; border-radius: 12px; background: var(--sea-soft); }
+.today .lbl { font-size: 0.8rem; color: var(--ink-soft); }
+.today-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+.today-grid div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.today-grid b { font-family: var(--mono); font-size: 0.95rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+@media (max-width: 520px) { .today-grid { grid-template-columns: repeat(3, 1fr); } }
 @media (max-width: 900px) { .lab { grid-template-columns: 1fr; } }
 @media (max-width: 900px) { .importance { grid-template-columns: 1fr; } }
 @media (max-width: 520px) { .bar { grid-template-columns: 8rem 1fr 3rem; } }
@@ -251,6 +257,16 @@ select { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-ra
         <span class="pill sun" id="issuedPill">Issued</span>
       </div>
       <p class="actual" id="stale" hidden></p>
+      <div class="today">
+        <span class="lbl" id="todayTitle">Measured today in Istanbul</span>
+        <div class="today-grid">
+          <div><span class="lbl">Temperature</span><b id="tTemp">–</b></div>
+          <div><span class="lbl">Humidity</span><b id="tHum">–</b></div>
+          <div><span class="lbl">Rainfall</span><b id="tPrec">–</b></div>
+          <div><span class="lbl">Cloud cover</span><b id="tCloud">–</b></div>
+          <div><span class="lbl">Solar radiation</span><b id="tRad">–</b></div>
+        </div>
+      </div>
       <div class="picker">
         <div class="field"><label for="fdate">Future date</label><input type="date" id="fdate"></div>
         <div class="field"><label for="fhour">Time</label><select id="fhour"></select></div>
@@ -298,7 +314,7 @@ select { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-ra
         <span class="eyebrow">SolarioAI predictor</span>
         <h2>Istanbul Solar Energy Predictor</h2>
         <p>Our original app, now built into the website. Enter today's weather, the last few days of solar radiation and your panel details, and the model predicts tomorrow's solar radiation and how much electricity your panels could generate.</p>
-        <p>It opens with today's real measurements from Istanbul, so the result is the forecast for tomorrow. Load a real day from 2026 to compare a prediction with what was actually measured.</p>
+        <p>It opens with the example values from our original app. Type in your own, or load a real day from 2026 to compare a prediction with what was actually measured.</p>
       </div>
     <form class="instrument" id="estimator" aria-label="What-if forecast">
       <div class="inst-head">
@@ -341,7 +357,7 @@ select { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-ra
       </div>
       <div class="cta-row">
         <button type="submit" class="btn primary" id="predictBtn">Predict</button>
-        <button type="button" class="btn small" id="latestDay">Use today's real data</button>
+        <button type="button" class="btn small" id="resetVals">Reset values</button>
         <button type="button" class="btn small" id="randomDay">Load a real day from 2026</button>
       </div>
       <p class="note">Decimal commas work too (3,8). Change any value and press Predict: the Random Forest (60 trees, 10 features, trained on 2015–2025) calculates the next day in your browser. Days from 2026 were never seen in training. Electricity = radiation × panel area × efficiency.</p>
@@ -662,7 +678,7 @@ select { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-ra
   updateForecast();
 
   // ---- what-if lab ----
-  var loaded = null, latest = false;
+  var loaded = null, latest = false, example = false;
   function labFeatures() {
     var iso = $("date").value || today, doy = doyOf(iso);
     var v = loaded ? loaded.slice(1, 9) : [num("temp"), num("hum"), num("prec"), num("cloud"), num("r0"), num("r1"), num("r2"), num("r3")];
@@ -688,10 +704,10 @@ select { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-ra
       $("dayPill").textContent = "Today's real data · " + fmtDay($("date").value, { day: "numeric", month: "short" });
       $("actual").innerHTML = "Prediction for <b>" + fmtDay(addDays($("date").value, 1), { weekday: "long", day: "numeric", month: "long" }) + "</b>, from the latest measurements in Istanbul.";
       $("actual").hidden = false;
-    } else { $("dayPill").textContent = "Your inputs"; $("actual").hidden = true; }
+    } else { $("dayPill").textContent = example ? "Example values" : "Your inputs"; $("actual").hidden = true; }
   }
   function loadDay(r) {
-    loaded = r; latest = false; $("date").value = r[0];
+    loaded = r; latest = false; example = false; $("date").value = r[0];
     $("temp").value = r[1]; $("hum").value = r[2]; $("prec").value = Math.round(r[3] * 10) / 10; $("cloud").value = r[4];
     $("r0").value = r[5].toFixed(2); $("r1").value = r[6].toFixed(2); $("r2").value = r[7].toFixed(2); $("r3").value = r[8].toFixed(2);
     updateLab();
@@ -703,7 +719,7 @@ select { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-ra
     $("actual").hidden = true;
     $("predictBtn").classList.add("pulse");
   }
-  $("estimator").addEventListener("input", function (e) { if (weatherIds.indexOf(e.target.id) >= 0) { loaded = null; latest = false; } markStale(); });
+  $("estimator").addEventListener("input", function (e) { if (weatherIds.indexOf(e.target.id) >= 0) { loaded = null; latest = false; example = false; } markStale(); });
   $("estimator").addEventListener("submit", function (e) {
     e.preventDefault();
     updateLab();
@@ -713,15 +729,15 @@ select { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-ra
     ro.classList.remove("flash"); void ro.offsetWidth; ro.classList.add("flash");
     if (ro.getBoundingClientRect().top < 0) ro.scrollIntoView({ block: "center", behavior: "smooth" });
   });
-  function fillLatest() {
-    var r = M.recent, d = r[r.length - 1];
-    loaded = null; latest = true;
-    $("date").value = d[0];
-    $("temp").value = d[1]; $("hum").value = d[2]; $("prec").value = Math.round(d[3] * 10) / 10; $("cloud").value = d[4];
-    $("r0").value = d[5].toFixed(2); $("r1").value = r[2][5].toFixed(2); $("r2").value = r[1][5].toFixed(2); $("r3").value = r[0][5].toFixed(2);
+  // Fixed example values, as in the original app; only the date follows the calendar.
+  var DEFAULTS = { temp: "20", hum: "65", prec: "0", cloud: "30", r0: "4", r1: "3,8", r2: "4,2", r3: "3,5", area: "20", eff: "20" };
+  function fillDefaults() {
+    loaded = null; latest = false; example = true;
+    Object.keys(DEFAULTS).forEach(function (k) { $(k).value = DEFAULTS[k]; });
+    $("date").value = now;
     updateLab();
   }
-  $("latestDay").addEventListener("click", fillLatest);
+  $("resetVals").addEventListener("click", fillDefaults);
   $("randomDay").addEventListener("click", function () { loadDay(M.days[Math.floor(Math.random() * M.days.length)]); });
 
   // ---- importance + 2026 numbers ----
@@ -733,7 +749,18 @@ select { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-ra
   $("mae26").textContent = M.mae26.toFixed(3); $("mae26b").textContent = M.mae26.toFixed(3); $("base26").textContent = M.base26.toFixed(3);
   $("n26").textContent = M.n26; $("gain26").textContent = ((1 - M.mae26 / M.base26) * 100).toFixed(1) + "%";
 
-  fillLatest();
+  // ---- today's measured data (top card) ----
+  (function () {
+    var d = R[R.length - 1];
+    $("todayTitle").textContent = (d[0] === now ? "Measured today in Istanbul · " : "Latest measurements in Istanbul · ") + fmtDay(d[0], { day: "numeric", month: "short" });
+    $("tTemp").textContent = d[1].toFixed(1) + " °C";
+    $("tHum").textContent = d[2] + " %";
+    $("tPrec").textContent = (+d[3]).toFixed(1) + " mm";
+    $("tCloud").textContent = d[4] + " %";
+    $("tRad").textContent = d[5].toFixed(2) + " kWh/m²";
+  })();
+
+  fillDefaults();
 })();
 </script>
 </body>
