@@ -175,7 +175,7 @@ input[type="date"] { width: 100%; padding: 6px 8px; border: 1px solid var(--line
 .outlook { display: flex; flex-direction: column; gap: 6px; }
 .outlook-head { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 .outlook-head .lbl, .readout .lbl { font-size: 0.8rem; color: var(--ink-soft); }
-#outlookSvg { width: 100%; height: auto; display: block; }
+#outlookSvg, #pastSvg { width: 100%; height: auto; display: block; }
 .future { font-size: 0.92rem; background: var(--sun-soft); border-radius: 10px; padding: 10px 14px; }
 .future b { font-family: var(--mono); }
 .lab { display: grid; grid-template-columns: 0.8fr 1.2fr; gap: 40px; align-items: start; }
@@ -197,6 +197,7 @@ select { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-ra
 .today .lbl { font-size: 0.8rem; color: var(--ink-soft); }
 .today-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
 .today-grid div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.today-grid .lbl { font-size: 0.8rem; color: var(--ink-soft); }
 .today-grid b { font-family: var(--mono); font-size: 0.95rem; font-weight: 600; font-variant-numeric: tabular-nums; }
 @media (max-width: 520px) { .today-grid { grid-template-columns: repeat(3, 1fr); } }
 @media (max-width: 900px) { .lab { grid-template-columns: 1fr; } }
@@ -238,57 +239,40 @@ select { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-ra
     <div class="hero-copy">
       <span class="eyebrow">AI + Climate · Istanbul · Team SYZYGY</span>
       <h1>Know the <em>sunlight</em> before it arrives.</h1>
-      <p class="lede">Pick any future date and hour. SolarioAI predicts how much sunlight will reach Istanbul at that moment, and how much electricity your own panels could make from it.</p>
+      <p class="lede">See today's measured sunlight and weather in Istanbul, then let SolarioAI predict tomorrow's solar radiation and how much electricity your own panels could make.</p>
       <div class="facts">
         <div class="fact"><b>2015–2025</b><span>Istanbul weather history</span></div>
         <div class="fact"><b>0.645</b><span>final MAE, kWh/m²/day</span></div>
         <div class="fact"><b>−6.75%</b><span>error vs. baseline</span></div>
       </div>
       <div class="cta-row">
-        <a class="btn primary" href="#forecast">See the forecast →</a>
+        <a class="btn primary" href="#forecast">See today's data →</a>
         <a class="btn" href="#lab">Open the predictor</a>
         <a class="btn" href="https://colab.research.google.com/drive/1_0U0nO2wBMyaX_uld513dDSZcV6bXN15?usp=sharing" target="_blank" rel="noopener">View the code</a>
       </div>
     </div>
 
-    <div class="instrument" id="forecast" style="scroll-margin-top:16px" aria-label="SolarioAI forecast">
+    <div class="instrument" id="forecast" style="scroll-margin-top:16px" aria-label="Today in Istanbul">
       <div class="inst-head">
-        <span class="eyebrow">AI forecast · Istanbul</span>
-        <span class="pill sun" id="issuedPill">Issued</span>
+        <span class="eyebrow">Today in Istanbul</span>
+        <span class="pill sun" id="issuedPill">–</span>
       </div>
       <p class="actual" id="stale" hidden></p>
-      <div class="today">
-        <span class="lbl" id="todayTitle">Measured today in Istanbul</span>
-        <div class="today-grid">
-          <div><span class="lbl">Temperature</span><b id="tTemp">–</b></div>
-          <div><span class="lbl">Humidity</span><b id="tHum">–</b></div>
-          <div><span class="lbl">Rainfall</span><b id="tPrec">–</b></div>
-          <div><span class="lbl">Cloud cover</span><b id="tCloud">–</b></div>
-          <div><span class="lbl">Solar radiation</span><b id="tRad">–</b></div>
-        </div>
-      </div>
-      <div class="picker">
-        <div class="field"><label for="fdate">Future date</label><input type="date" id="fdate"></div>
-        <div class="field"><label for="fhour">Time</label><select id="fhour"></select></div>
-      </div>
       <div class="readout">
-        <div><span class="lbl" id="hourLabel">Solar radiation</span><span class="big sun" id="hourRad">–<small>W/m²</small></span></div>
-        <div><span class="lbl">Your panels at that time</span><span class="big sea" id="hourKw">–<small>kW</small></span></div>
+        <div><span class="lbl">Solar radiation today</span><span class="big sun" id="tRad">–<small>kWh/m²</small></span></div>
+        <div><span class="lbl">Temperature</span><span class="big sea" id="tTemp">–<small>°C</small></span></div>
       </div>
-      <p class="future" id="dayOut"></p>
+      <div class="today-grid">
+        <div><span class="lbl">Humidity</span><b id="tHum">–</b></div>
+        <div><span class="lbl">Rainfall</span><b id="tPrec">–</b></div>
+        <div><span class="lbl">Cloud cover</span><b id="tCloud">–</b></div>
+      </div>
       <div class="outlook">
-        <div class="outlook-head"><span class="lbl" id="hourlyTitle">Through the day, W/m²</span><span class="lbl">tap a bar to pick the hour</span></div>
-        <svg id="hourlySvg" viewBox="0 0 400 150" role="img" aria-label="Hourly solar radiation for the chosen day"></svg>
+        <div class="outlook-head"><span class="lbl">Solar radiation, last 4 days (kWh/m²)</span></div>
+        <svg id="pastSvg" viewBox="0 0 400 150" role="img" aria-label="Measured solar radiation over the last four days"></svg>
       </div>
-      <div class="outlook">
-        <div class="outlook-head"><span class="lbl">Next 7 days, kWh/m² per day</span><span class="lbl">bar = forecast · line = typical error</span></div>
-        <svg id="outlookSvg" viewBox="0 0 400 170" role="img" aria-label="Seven-day solar radiation outlook"></svg>
-      </div>
-      <div class="fields">
-        <div class="field"><label for="farea">Panel area <output id="fareaO"></output></label><input type="range" id="farea" min="1" max="200" step="1" value="20"></div>
-        <div class="field"><label for="feff">Efficiency <output id="feffO"></output></label><input type="range" id="feff" min="10" max="25" step="0.5" value="20"></div>
-      </div>
-      <p class="note">How it predicts: a Random Forest forecasts the day's total sunlight, then a second Random Forest spreads it over the hours. Tomorrow uses today's measured weather; later dates use typical weather for the season. Typical error in daylight hours on 2026 data: <span class="mono" id="errTomorrow">±64</span> W/m² for tomorrow, <span class="mono" id="errLater">±81</span> W/m² further ahead.</p>
+      <p class="note">Measured values for Istanbul from Open-Meteo, updated automatically every few hours. To predict tomorrow, use the predictor below.</p>
+      <div class="cta-row"><a class="btn small" href="#lab">Predict tomorrow →</a></div>
     </div>
   </div>
 </header>
@@ -495,7 +479,7 @@ select { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-ra
       </div>
       <div class="limits">
         <div class="limit"><h3>Sudden weather</h3><p>The model can't reliably foresee abrupt changes such as unexpected cloud cover or storms.</p></div>
-        <div class="limit"><h3>Beyond tomorrow</h3><p>Without a weather forecast, days 2–7 and far-off dates use typical weather for the season, so they show what to expect on average, not that day's exact weather.</p></div>
+        <div class="limit"><h3>Observed inputs</h3><p>The predictor needs a day's observed weather and radiation. It doesn't read weather forecasts, so it predicts one day ahead.</p></div>
         <div class="limit"><h3>Simplified energy</h3><p>The electricity estimate ignores shading, panel orientation, heat-related efficiency losses and other real-world factors.</p></div>
       </div>
       <p class="note" style="margin-top:28px; max-width:46rem">2025 results were looked at during earlier development, so the final evaluation isn't fully independent of prior decisions. That's why this site also tests the model on 2026 data, which played no part in any decision.</p>
@@ -565,117 +549,38 @@ select { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-ra
   function row(w, hist, doy) { var a = 2 * Math.PI * doy / 365.25; return [w[0], w[1], w[2], w[3], hist[hist.length - 1], Math.sin(a), Math.cos(a), hist[hist.length - 2], hist[hist.length - 3], hist[hist.length - 4]]; }
   function clim(doy) { return M.clim[(doy - 1) % 366]; }
 
-  // ---- forecast from the latest measured day ----
+  // ---- today's measured data (top card) ----
   var R = M.recent, today = M.issued;
-  // The real calendar day in Istanbul; forecasts are always anchored to it, even if measurements lag behind.
   var now = (function () {
     try { return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Istanbul", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date()); }
     catch (e) { var d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10); }
   })();
   if (now < today) now = today;
-  var gap = Math.round((Date.parse(now) - Date.parse(today)) / DAY);
-  // Chain the model from the last measured day through today and 7 days past it.
-  var chain = (function () {
-    var hist = R.map(function (r) { return r[5]; });
-    var w = R[R.length - 1].slice(1, 5), doy = doyOf(today), out = [];
-    for (var h = 1; h <= gap + 7; h++) {
-      var p = forest(row(w, hist, doy));
-      out.push({ date: addDays(today, h), rad: p, err: M.hmae[Math.min(h, 7) - 1] });
-      hist.push(p); doy = doy % 366 + 1; w = clim(doy).slice(0, 4);
-    }
-    return out;
-  })();
-  var outlook = chain.slice(gap);
-  function typical(iso) {
-    var d = doyOf(iso), prev = (d + 364) % 366 + 1, c = clim(prev);
-    var lag = function (k) { return clim(((d - 1 - k) % 366 + 366) % 366 + 1)[4]; };
-    return forest(row(c.slice(0, 4), [lag(3), lag(2), lag(1), c[4]], prev));
-  }
-  function hforest(x) { var s = 0; for (var k = 0; k < M.htrees.length; k++) s += treePredict(M.htrees[k], x); return Math.max(0, s / M.htrees.length); }
-  function hourly(dkwh, iso) {
-    var a = 2 * Math.PI * doyOf(iso) / 365.25, p = [], s = 0;
-    for (var hh = 0; hh < 24; hh++) { var v = hforest([hh, Math.sin(a), Math.cos(a), dkwh]); p.push(v); s += v; }
-    return s > 0 ? p.map(function (v) { return v * dkwh * 1000 / s; }) : p;
-  }
-  function dayForecast(iso) {
-    var idx = Math.round((Date.parse(iso) - Date.parse(today)) / DAY) - 1;
-    if (idx === 0) return { rad: chain[0].rad, how: "forecast from the latest measured weather", err: chain[0].err };
-    if (idx > 0 && idx < chain.length) return { rad: chain[idx].rad, how: "7-day outlook", err: chain[idx].err };
-    return { rad: typical(iso), how: "typical for this date in Istanbul", err: M.hmae[6] };
-  }
   var fmtK = function (k) { return k >= 100 ? k.toFixed(0) : k.toFixed(1); };
-  var pad = function (n) { return (n < 10 ? "0" : "") + n + ":00"; };
-  var gridY = function (ymax, step, Y, x0, x1) {
-    var s = "";
-    for (var v = 0; v <= ymax + 1e-9; v += step) s += '<line x1="' + x0 + '" x2="' + x1 + '" y1="' + Y(v).toFixed(1) + '" y2="' + Y(v).toFixed(1) + '" stroke="var(--line)"' + (v ? ' stroke-dasharray="2 4"' : "") + '/><text x="' + (x0 - 6) + '" y="' + (Y(v) + 3.5).toFixed(1) + '" text-anchor="end" font-size="10" fill="var(--ink-soft)" font-family="JetBrains Mono, monospace">' + v + '</text>';
-    return s;
-  };
-
-  function drawOutlook(sel) {
-    var top = Math.max.apply(null, outlook.map(function (o) { return o.rad + o.err; }));
-    var step = top > 6 ? 2 : 1, ymax = Math.ceil(top / step) * step;
-    var x0 = 30, x1 = 392, y0 = 140, y1 = 12, bw = (x1 - x0) / 7;
-    var Y = function (v) { return y0 - (v / ymax) * (y0 - y1); };
-    var s = gridY(ymax, step, Y, x0, x1);
-    outlook.forEach(function (o, i) {
-      var cx = x0 + bw * i + bw / 2, w = bw * 0.56, on = o.date === sel;
-      s += '<g class="hit" data-date="' + o.date + '"><rect x="' + (x0 + bw * i) + '" y="0" width="' + bw + '" height="170" fill="transparent"/>';
-      s += '<rect x="' + (cx - w / 2).toFixed(1) + '" y="' + Y(o.rad).toFixed(1) + '" width="' + w.toFixed(1) + '" height="' + (y0 - Y(o.rad)).toFixed(1) + '" rx="3" fill="var(--sun)" opacity="' + (on ? 1 : 0.45) + '"/>';
-      s += '<line x1="' + cx + '" x2="' + cx + '" y1="' + Y(o.rad + o.err).toFixed(1) + '" y2="' + Y(Math.max(0, o.rad - o.err)).toFixed(1) + '" stroke="var(--ink)" stroke-width="1.5" opacity="0.5"/>';
-      s += '<text x="' + cx + '" y="' + (Y(o.rad + o.err) - 4).toFixed(1) + '" text-anchor="middle" font-size="10" fill="var(--ink)" font-family="JetBrains Mono, monospace">' + o.rad.toFixed(1) + '</text>';
-      s += '<text x="' + cx + '" y="155" text-anchor="middle" font-size="10" fill="var(--ink-soft)"' + (on ? ' font-weight="700"' : "") + '>' + fmtDay(o.date, { weekday: "short" }) + '</text>';
-      s += '<text x="' + cx + '" y="167" text-anchor="middle" font-size="9.5" fill="var(--ink-soft)" font-family="JetBrains Mono, monospace">' + fmtDay(o.date, { day: "numeric", month: "short" }) + '</text></g>';
-    });
-    $("outlookSvg").innerHTML = s;
-  }
-
-  function drawHourly(vals, sel) {
-    var top = Math.max(50, Math.max.apply(null, vals)), step = top > 600 ? 200 : top > 250 ? 100 : 50, ymax = Math.ceil(top / step) * step;
-    var x0 = 34, x1 = 394, y0 = 124, y1 = 10, bw = (x1 - x0) / 24;
-    var Y = function (v) { return y0 - (v / ymax) * (y0 - y1); };
-    var s = gridY(ymax, step, Y, x0, x1);
-    for (var hh = 0; hh < 24; hh++) {
-      var v = vals[(hh + 1) % 24], x = x0 + bw * hh, on = hh === sel; // hour hh = period hh:00–hh+1:00
-      s += '<g class="hit" data-hour="' + hh + '"><rect x="' + x.toFixed(1) + '" y="0" width="' + bw.toFixed(1) + '" height="150" fill="transparent"/>';
-      s += '<rect x="' + (x + 1).toFixed(1) + '" y="' + Y(v).toFixed(1) + '" width="' + (bw - 2).toFixed(1) + '" height="' + (y0 - Y(v)).toFixed(1) + '" rx="2" fill="' + (on ? "var(--sun)" : "var(--sea)") + '" opacity="' + (on ? 1 : 0.45) + '"/></g>';
-      if (hh % 3 === 0) s += '<text x="' + (x + bw / 2).toFixed(1) + '" y="140" text-anchor="middle" font-size="9.5" fill="var(--ink-soft)" font-family="JetBrains Mono, monospace">' + pad(hh).slice(0, 2) + '</text>';
+  (function () {
+    var d = R[R.length - 1];
+    $("issuedPill").textContent = fmtDay(d[0], { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+    if (d[0] !== now) {
+      $("stale").textContent = "Today's measurements are not in yet. Showing the latest day, " + fmtDay(d[0], { day: "numeric", month: "long" }) + ".";
+      $("stale").hidden = false;
     }
-    $("hourlySvg").innerHTML = s;
-  }
-
-  function updateForecast() {
-    $("fareaO").value = num("farea") + " m²";
-    $("feffO").value = num("feff").toFixed(1) + " %";
-    var iso = $("fdate").value;
-    if (!iso || iso <= now) { iso = addDays(now, 1); $("fdate").value = iso; }
-    var hr = +$("fhour").value, f = dayForecast(iso), vals = hourly(f.rad, iso), v = vals[(hr + 1) % 24];
-    var area = num("farea"), eff = num("feff") / 100;
-    $("hourLabel").textContent = "Solar radiation, " + pad(hr) + "–" + pad((hr + 1) % 24);
-    $("hourRad").innerHTML = Math.round(v) + "<small>W/m²</small>";
-    $("hourKw").innerHTML = (v * area * eff / 1000).toFixed(2) + "<small>kW</small>";
-    $("dayOut").innerHTML = fmtDay(iso, { weekday: "long", day: "numeric", month: "long", year: "numeric" }) + ": <b>" + f.rad.toFixed(2) + "</b> kWh/m² over the day, about <b>" + fmtK(f.rad * area * eff) + "</b> kWh from your panels <span style=\"color:var(--ink-soft)\">(" + f.how + ", ±" + f.err.toFixed(2) + ")</span>";
-    $("hourlyTitle").textContent = fmtDay(iso, { day: "numeric", month: "short" }) + " through the day, W/m²";
-    drawHourly(vals, hr);
-    drawOutlook(iso);
-  }
-
-  var hs = $("fhour");
-  for (var k = 0; k < 24; k++) { var o = document.createElement("option"); o.value = k; o.textContent = pad(k); hs.appendChild(o); }
-  hs.value = 12;
-  $("issuedPill").textContent = "Today · " + fmtDay(now, { day: "numeric", month: "short", year: "numeric" });
-  if (gap >= 2) {
-    $("stale").textContent = "Latest measurements are from " + fmtDay(today, { day: "numeric", month: "long" }) + "; the model fills in the days since then.";
-    $("stale").hidden = false;
-  }
-  $("fdate").value = addDays(now, 1);
-  $("fdate").min = addDays(now, 1);
-  $("errTomorrow").textContent = "±" + Math.round(M.hmae_hour.tomorrow);
-  $("errLater").textContent = "±" + Math.round(M.hmae_hour.typical);
-  $("forecast").addEventListener("input", updateForecast);
-  $("forecast").addEventListener("change", updateForecast);
-  $("hourlySvg").addEventListener("click", function (e) { var g = e.target.closest("[data-hour]"); if (g) { hs.value = g.getAttribute("data-hour"); updateForecast(); } });
-  $("outlookSvg").addEventListener("click", function (e) { var g = e.target.closest("[data-date]"); if (g) { $("fdate").value = g.getAttribute("data-date"); updateForecast(); } });
-  updateForecast();
+    $("tRad").innerHTML = d[5].toFixed(2) + "<small>kWh/m²</small>";
+    $("tTemp").innerHTML = d[1].toFixed(1) + "<small>°C</small>";
+    $("tHum").textContent = d[2] + " %";
+    $("tPrec").textContent = (+d[3]).toFixed(1) + " mm";
+    $("tCloud").textContent = d[4] + " %";
+    var top = Math.max.apply(null, R.map(function (r) { return r[5]; })), step = top > 4 ? 2 : 1, ymax = Math.max(step, Math.ceil(top / step) * step);
+    var x0 = 30, x1 = 392, y0 = 122, y1 = 16, bw = (x1 - x0) / R.length;
+    var Y = function (v) { return y0 - (v / ymax) * (y0 - y1); }, s = "";
+    for (var v = 0; v <= ymax; v += step) s += '<line x1="' + x0 + '" x2="' + x1 + '" y1="' + Y(v).toFixed(1) + '" y2="' + Y(v).toFixed(1) + '" stroke="var(--line)"' + (v ? ' stroke-dasharray="2 4"' : "") + '/><text x="' + (x0 - 6) + '" y="' + (Y(v) + 3.5).toFixed(1) + '" text-anchor="end" font-size="10" fill="var(--ink-soft)" font-family="JetBrains Mono, monospace">' + v + '</text>';
+    R.forEach(function (r, i) {
+      var cx = x0 + bw * i + bw / 2, w = bw * 0.5, last = i === R.length - 1;
+      s += '<rect x="' + (cx - w / 2).toFixed(1) + '" y="' + Y(r[5]).toFixed(1) + '" width="' + w.toFixed(1) + '" height="' + (y0 - Y(r[5])).toFixed(1) + '" rx="3" fill="var(--sun)" opacity="' + (last ? 1 : 0.45) + '"/>';
+      s += '<text x="' + cx + '" y="' + (Y(r[5]) - 5).toFixed(1) + '" text-anchor="middle" font-size="10.5" fill="var(--ink)" font-family="JetBrains Mono, monospace">' + r[5].toFixed(2) + '</text>';
+      s += '<text x="' + cx + '" y="140" text-anchor="middle" font-size="10" fill="var(--ink-soft)"' + (last ? ' font-weight="700"' : "") + '>' + (last && r[0] === now ? "Today" : fmtDay(r[0], { weekday: "short", day: "numeric", month: "short" })) + '</text>';
+    });
+    $("pastSvg").innerHTML = s;
+  })();
 
   // ---- what-if lab ----
   var loaded = null, latest = false, example = false;
@@ -748,17 +653,6 @@ select { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-ra
   }).join("");
   $("mae26").textContent = M.mae26.toFixed(3); $("mae26b").textContent = M.mae26.toFixed(3); $("base26").textContent = M.base26.toFixed(3);
   $("n26").textContent = M.n26; $("gain26").textContent = ((1 - M.mae26 / M.base26) * 100).toFixed(1) + "%";
-
-  // ---- today's measured data (top card) ----
-  (function () {
-    var d = R[R.length - 1];
-    $("todayTitle").textContent = (d[0] === now ? "Measured today in Istanbul · " : "Latest measurements in Istanbul · ") + fmtDay(d[0], { day: "numeric", month: "short" });
-    $("tTemp").textContent = d[1].toFixed(1) + " °C";
-    $("tHum").textContent = d[2] + " %";
-    $("tPrec").textContent = (+d[3]).toFixed(1) + " mm";
-    $("tCloud").textContent = d[4] + " %";
-    $("tRad").textContent = d[5].toFixed(2) + " kWh/m²";
-  })();
 
   fillDefaults();
 })();
