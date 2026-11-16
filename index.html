@@ -551,16 +551,25 @@ select { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-ra
 
   // ---- forecast from the latest measured day ----
   var R = M.recent, today = M.issued;
-  var outlook = (function () {
+  // The real calendar day in Istanbul; forecasts are always anchored to it, even if measurements lag behind.
+  var now = (function () {
+    try { return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Istanbul", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date()); }
+    catch (e) { var d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10); }
+  })();
+  if (now < today) now = today;
+  var gap = Math.round((Date.parse(now) - Date.parse(today)) / DAY);
+  // Chain the model from the last measured day through today and 7 days past it.
+  var chain = (function () {
     var hist = R.map(function (r) { return r[5]; });
     var w = R[R.length - 1].slice(1, 5), doy = doyOf(today), out = [];
-    for (var h = 1; h <= 7; h++) {
+    for (var h = 1; h <= gap + 7; h++) {
       var p = forest(row(w, hist, doy));
-      out.push({ date: addDays(today, h), rad: p, err: M.hmae[h - 1] });
+      out.push({ date: addDays(today, h), rad: p, err: M.hmae[Math.min(h, 7) - 1] });
       hist.push(p); doy = doy % 366 + 1; w = clim(doy).slice(0, 4);
     }
     return out;
   })();
+  var outlook = chain.slice(gap);
   function typical(iso) {
     var d = doyOf(iso), prev = (d + 364) % 366 + 1, c = clim(prev);
     var lag = function (k) { return clim(((d - 1 - k) % 366 + 366) % 366 + 1)[4]; };
@@ -574,8 +583,8 @@ select { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-ra
   }
   function dayForecast(iso) {
     var idx = Math.round((Date.parse(iso) - Date.parse(today)) / DAY) - 1;
-    if (idx === 0) return { rad: outlook[0].rad, how: "forecast from today's measured weather", err: M.hmae[0] };
-    if (idx > 0 && idx < 7) return { rad: outlook[idx].rad, how: "7-day outlook", err: M.hmae[idx] };
+    if (idx === 0) return { rad: chain[0].rad, how: "forecast from the latest measured weather", err: chain[0].err };
+    if (idx > 0 && idx < chain.length) return { rad: chain[idx].rad, how: "7-day outlook", err: chain[idx].err };
     return { rad: typical(iso), how: "typical for this date in Istanbul", err: M.hmae[6] };
   }
   var fmtK = function (k) { return k >= 100 ? k.toFixed(0) : k.toFixed(1); };
@@ -622,7 +631,7 @@ select { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-ra
     $("fareaO").value = num("farea") + " m²";
     $("feffO").value = num("feff").toFixed(1) + " %";
     var iso = $("fdate").value;
-    if (!iso || iso <= today) { iso = addDays(today, 1); $("fdate").value = iso; }
+    if (!iso || iso <= now) { iso = addDays(now, 1); $("fdate").value = iso; }
     var hr = +$("fhour").value, f = dayForecast(iso), vals = hourly(f.rad, iso), v = vals[(hr + 1) % 24];
     var area = num("farea"), eff = num("feff") / 100;
     $("hourLabel").textContent = "Solar radiation, " + pad(hr) + "–" + pad((hr + 1) % 24);
@@ -637,14 +646,13 @@ select { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-ra
   var hs = $("fhour");
   for (var k = 0; k < 24; k++) { var o = document.createElement("option"); o.value = k; o.textContent = pad(k); hs.appendChild(o); }
   hs.value = 12;
-  $("issuedPill").textContent = "Data to " + fmtDay(today, { day: "numeric", month: "short", year: "numeric" });
-  var localToday = new Date(); localToday = new Date(localToday.getTime() - localToday.getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
-  if (localToday > addDays(today, 1)) {
-    $("stale").textContent = "Measurements run up to " + fmtDay(today, { day: "numeric", month: "long", year: "numeric" }) + ", so dates after the next 7 days use typical weather.";
+  $("issuedPill").textContent = "Today · " + fmtDay(now, { day: "numeric", month: "short", year: "numeric" });
+  if (gap >= 2) {
+    $("stale").textContent = "Latest measurements are from " + fmtDay(today, { day: "numeric", month: "long" }) + "; the model fills in the days since then.";
     $("stale").hidden = false;
   }
-  $("fdate").value = addDays(today, 1);
-  $("fdate").min = addDays(today, 1);
+  $("fdate").value = addDays(now, 1);
+  $("fdate").min = addDays(now, 1);
   $("errTomorrow").textContent = "±" + Math.round(M.hmae_hour.tomorrow);
   $("errLater").textContent = "±" + Math.round(M.hmae_hour.typical);
   $("forecast").addEventListener("input", updateForecast);

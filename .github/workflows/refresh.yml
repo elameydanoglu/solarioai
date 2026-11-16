@@ -1,7 +1,7 @@
-name: Daily forecast refresh
+name: Forecast data refresh
 on:
   schedule:
-    - cron: "41 20 * * *"   # 23:41 Istanbul time
+    - cron: "17 */3 * * *"   # every 3 hours; picks up new measurements as soon as they appear
   workflow_dispatch:
 permissions:
   contents: write
